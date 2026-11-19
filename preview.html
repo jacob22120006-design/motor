@@ -1,0 +1,633 @@
+
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Control de Motor DC</title>
+
+<style>
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: 'Segoe UI', sans-serif;
+    background: #0b1120;
+    color: #e2e8f0;
+    min-height: 100vh;
+    padding: 25px;
+}
+
+.container {
+    max-width: 1050px;
+    margin: auto;
+}
+
+header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 15px;
+    margin-bottom: 30px;
+}
+
+h1 {
+    font-size: 27px;
+    color: #f8fafc;
+}
+
+.subtitle {
+    color: #94a3b8;
+    margin-top: 5px;
+}
+
+.card {
+    background: #151f32;
+    border: 1px solid #26354b;
+    border-radius: 14px;
+    padding: 24px;
+    margin-bottom: 20px;
+}
+
+.connection {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.status {
+    color: #f87171;
+    font-weight: bold;
+    margin-right: auto;
+}
+
+.status.connected {
+    color: #4ade80;
+}
+
+button {
+    border: none;
+    border-radius: 9px;
+    padding: 13px 20px;
+    font-size: 14px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+button:hover {
+    filter: brightness(1.2);
+    transform: translateY(-2px);
+}
+
+button:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.connect {
+    background: #2563eb;
+    color: white;
+}
+
+.disconnect {
+    background: #334155;
+    color: white;
+}
+
+.controls {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 15px;
+    margin-top: 20px;
+}
+
+.forward {
+    background: #16a34a;
+    color: white;
+}
+
+.reverse {
+    background: #2563eb;
+    color: white;
+}
+
+.stop {
+    background: #d97706;
+    color: white;
+}
+
+.brake {
+    background: #dc2626;
+    color: white;
+}
+
+h2 {
+    font-size: 18px;
+    margin-bottom: 20px;
+}
+
+.speed-value {
+    font-size: 42px;
+    font-weight: bold;
+    color: #60a5fa;
+    text-align: center;
+    margin: 15px 0;
+}
+
+input[type="range"] {
+    width: 100%;
+    accent-color: #3b82f6;
+    cursor: pointer;
+}
+
+.speed-labels {
+    display: flex;
+    justify-content: space-between;
+    color: #94a3b8;
+    font-size: 13px;
+}
+
+.motor-state {
+    background: #0b1120;
+    border-radius: 10px;
+    padding: 20px;
+    text-align: center;
+    margin-top: 15px;
+}
+
+.motor-state p {
+    color: #94a3b8;
+    margin-bottom: 8px;
+}
+
+.motor-state h3 {
+    color: #4ade80;
+    font-size: 22px;
+}
+
+.terminal {
+    background: #080d18;
+    border: 1px solid #26354b;
+    border-radius: 9px;
+    padding: 15px;
+    height: 150px;
+    overflow-y: auto;
+    font-family: monospace;
+    font-size: 13px;
+    color: #4ade80;
+}
+
+.terminal p {
+    margin-bottom: 7px;
+}
+
+footer {
+    color: #64748b;
+    text-align: center;
+    font-size: 12px;
+    margin-top: 25px;
+}
+
+@media(max-width: 600px) {
+    body {
+        padding: 12px;
+    }
+
+    .controls {
+        grid-template-columns: 1fr;
+    }
+
+    h1 {
+        font-size: 22px;
+    }
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<header>
+
+<div>
+<h1>CONTROL DE MOTOR DC</h1>
+<p class="subtitle">Sistema de control Arduino + L298N</p>
+</div>
+
+</header>
+
+<!-- CONEXION -->
+
+<div class="card">
+
+<h2>Conexion serial</h2>
+
+<div class="connection">
+
+<span id="status" class="status">
+● DESCONECTADO
+</span>
+
+<button class="connect" id="connectBtn"
+onclick="conectar()">
+CONECTAR ARDUINO
+</button>
+
+<button class="disconnect" id="disconnectBtn"
+onclick="desconectar()" disabled>
+DESCONECTAR
+</button>
+
+</div>
+
+</div>
+
+<!-- DIRECCION -->
+
+<div class="card">
+
+<h2>Control de direccion</h2>
+
+<div class="controls">
+
+<button class="forward" onclick="enviar('F')">
+↑ ADELANTE
+</button>
+
+<button class="reverse" onclick="enviar('R')">
+↓ REVERSA
+</button>
+
+<button class="stop" onclick="enviar('P')">
+■ PARO LIBRE
+</button>
+
+<button class="brake" onclick="enviar('B')">
+● FRENADO
+</button>
+
+</div>
+
+</div>
+
+<!-- VELOCIDAD -->
+
+<div class="card">
+
+<h2>Control de velocidad</h2>
+
+<div class="speed-value">
+
+<span id="speedNumber">180</span>
+
+<small style="font-size:18px;color:#94a3b8">
+/ 255
+</small>
+
+</div>
+
+<input
+type="range"
+id="speedSlider"
+min="0"
+max="255"
+value="180"
+oninput="actualizarVelocidad(this.value)"
+onchange="mandarVelocidad()"
+>
+
+<div class="speed-labels">
+<span>0 - Parado</span>
+<span>255 - Máximo</span>
+</div>
+
+</div>
+
+<!-- ESTADO -->
+
+<div class="card">
+
+<h2>Estado del motor</h2>
+
+<div class="motor-state">
+
+<p>ESTADO ACTUAL</p>
+
+<h3 id="motorStatus">DETENIDO</h3>
+
+</div>
+
+</div>
+
+<!-- TERMINAL -->
+
+<div class="card">
+
+<h2>Monitor de comunicacion</h2>
+
+<div class="terminal" id="terminal">
+
+<p>Sistema preparado...</p>
+<p>Esperando conexion con Arduino...</p>
+
+</div>
+
+</div>
+
+<footer>
+CONTROL DE MOTOR DC | ARDUINO UNO | L298N
+</footer>
+
+</div>
+
+<script>
+
+let port = null;
+let reader = null;
+let writer = null;
+
+let leyendo = false;
+let conectado = false;
+
+let ultimaVelocidad = 180;
+let temporizador = null;
+
+// REGISTRO DE MENSAJES
+
+function registrar(mensaje) {
+
+    const terminal = document.getElementById("terminal");
+
+    const linea = document.createElement("p");
+
+    linea.textContent = "> " + mensaje;
+
+    terminal.appendChild(linea);
+
+    terminal.scrollTop = terminal.scrollHeight;
+}
+
+// ACTUALIZAR ESTADO
+
+function cambiarEstado(estado) {
+
+    document.getElementById("motorStatus").textContent = estado;
+
+}
+
+// VELOCIDAD VISUAL
+
+function actualizarVelocidad(valor) {
+
+    document.getElementById("speedNumber").textContent = valor;
+
+}
+
+// CONECTAR ARDUINO
+
+async function conectar() {
+
+    try {
+
+        if (!("serial" in navigator)) {
+
+            alert("Tu navegador no soporta Web Serial. Utiliza Chrome o Edge.");
+
+            return;
+        }
+
+        port = await navigator.serial.requestPort();
+
+        await port.open({
+            baudRate: 9600
+        });
+
+        writer = port.writable.getWriter();
+
+        conectado = true;
+
+        document.getElementById("status").textContent =
+        "● CONECTADO";
+
+        document.getElementById("status").classList.add("connected");
+
+        document.getElementById("connectBtn").disabled = true;
+
+        document.getElementById("disconnectBtn").disabled = false;
+
+        registrar("Arduino conectado correctamente.");
+
+        leerDatos();
+
+    } catch(error) {
+
+        registrar("Error: " + error.message);
+
+    }
+
+}
+
+// ENVIAR COMANDOS
+
+async function enviar(comando) {
+
+    if (!conectado || !writer) {
+
+        alert("Primero conecta el Arduino.");
+
+        return;
+    }
+
+    try {
+
+        const datos = new TextEncoder().encode(comando + "\n");
+
+        await writer.write(datos);
+
+        registrar("Comando enviado: " + comando);
+
+        if(comando === "F") {
+            cambiarEstado("ADELANTE");
+        }
+
+        if(comando === "R") {
+            cambiarEstado("REVERSA");
+        }
+
+        if(comando === "P") {
+            cambiarEstado("PARO LIBRE");
+        }
+
+        if(comando === "B") {
+            cambiarEstado("FRENADO");
+        }
+
+    } catch(error) {
+
+        registrar("Error de envio: " + error.message);
+
+    }
+
+}
+
+// ACTUALIZAR VELOCIDAD
+
+async function mandarVelocidad() {
+
+    const valor = document.getElementById("speedSlider").value;
+
+    if(valor === String(ultimaVelocidad)) return;
+
+    ultimaVelocidad = Number(valor);
+
+    await enviar("V:" + valor);
+
+}
+
+// LECTURA DE ARDUINO
+
+async function leerDatos() {
+
+    leyendo = true;
+
+    try {
+
+        const decoder = new TextDecoder();
+
+        while(conectado && port.readable) {
+
+            reader = port.readable.getReader();
+
+            try {
+
+                while(conectado) {
+
+                    const {value, done} = await reader.read();
+
+                    if(done) break;
+
+                    if(value) {
+
+                        const mensaje = decoder.decode(value);
+
+                        const lineas = mensaje.split(/\r?\n/);
+
+                        lineas.forEach(linea => {
+
+                            linea = linea.trim();
+
+                            if(linea.length > 0) {
+
+                                registrar("Arduino: " + linea);
+
+                                if(linea === "ADELANTE" ||
+                                   linea === "REVERSA" ||
+                                   linea === "FRENADO" ||
+                                   linea === "PARO LIBRE") {
+
+                                    cambiarEstado(linea);
+                                }
+
+                            }
+
+                        });
+
+                    }
+
+                }
+
+            } finally {
+
+                reader.releaseLock();
+
+                reader = null;
+
+            }
+
+            break;
+
+        }
+
+    } catch(error) {
+
+        if(conectado) {
+            registrar("Error de lectura: " + error.message);
+        }
+
+    }
+
+    leyendo = false;
+
+}
+
+// DESCONECTAR
+
+async function desconectar() {
+
+    try {
+
+        conectado = false;
+
+        if(writer) {
+
+            await writer.write(
+                new TextEncoder().encode("P\n")
+            );
+
+            writer.releaseLock();
+
+            writer = null;
+
+        }
+
+        if(reader) {
+
+            await reader.cancel();
+
+        }
+
+        if(port) {
+
+            await port.close();
+
+            port = null;
+
+        }
+
+        document.getElementById("status").textContent =
+        "● DESCONECTADO";
+
+        document.getElementById("status").classList.remove("connected");
+
+        document.getElementById("connectBtn").disabled = false;
+
+        document.getElementById("disconnectBtn").disabled = true;
+
+        cambiarEstado("DESCONECTADO");
+
+        registrar("Puerto serial desconectado.");
+
+    } catch(error) {
+
+        registrar("Error al desconectar: " + error.message);
+
+    }
+
+}
+
+</script>
+
+</body>
+</html>
